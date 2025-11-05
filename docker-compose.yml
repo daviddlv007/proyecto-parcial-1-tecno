@@ -1,0 +1,26 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mail_system_db
+    environment:
+      POSTGRES_DB: db_mail_system
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # MailHog - SMTP/POP3 Server para testing local
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mail_system_mailhog
+    ports:
+      - "1025:1025"  # SMTP server
+      - "8025:8025"  # Web UI
+      - "1100:1100"  # POP3 server (MailHog no tiene POP3 nativo, usaremos SMTP)
+
+volumes:
+  postgres_data:

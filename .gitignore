@@ -1,0 +1,19 @@
+# Ignorar archivos compilados
+bin/
+*.class
+
+# Ignorar logs
+logs/
+*.log
+
+# Ignorar archivos de configuración local
+config.local.properties
+
+# Ignorar archivos del IDE
+.idea/
+.vscode/
+*.iml
+
+# Ignorar archivos de sistema
+.DS_Store
+Thumbs.db
