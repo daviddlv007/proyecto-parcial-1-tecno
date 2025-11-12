@@ -25,6 +25,22 @@ public class DBConnection {
         try (FileInputStream fis = new FileInputStream("config.properties")) {
             config.load(fis);
         }
+        
+        // Cargar variables de entorno si están disponibles
+        String dbHost = System.getenv("DB_HOST");
+        if (dbHost != null) config.setProperty("db.host", dbHost);
+        
+        String dbPort = System.getenv("DB_PORT");
+        if (dbPort != null) config.setProperty("db.port", dbPort);
+        
+        String dbName = System.getenv("DB_NAME");
+        if (dbName != null) config.setProperty("db.name", dbName);
+        
+        String dbUser = System.getenv("DB_USER");
+        if (dbUser != null) config.setProperty("db.user", dbUser);
+        
+        String dbPassword = System.getenv("DB_PASSWORD");
+        if (dbPassword != null) config.setProperty("db.password", dbPassword);
     }
 
     private void connect() throws SQLException {

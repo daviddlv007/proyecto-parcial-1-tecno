@@ -12,15 +12,40 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mail_network
 
-  # MailHog - SMTP/POP3 Server para testing local
+  # MailHog - SMTP Server para testing local
   mailhog:
     image: mailhog/mailhog:latest
     container_name: mail_system_mailhog
     ports:
       - "1025:1025"  # SMTP server
       - "8025:8025"  # Web UI
-      - "1100:1100"  # POP3 server (MailHog no tiene POP3 nativo, usaremos SMTP)
+    networks:
+      - mail_network
+
+  # Aplicación Java - Mail System
+  mail_app:
+    build: .
+    container_name: mail_system_app
+    depends_on:
+      - postgres
+      - mailhog
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: db_mail_system
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+    networks:
+      - mail_network
 
 volumes:
   postgres_data:
+
+networks:
+  mail_network:
+    driver: bridge

@@ -23,6 +23,13 @@ public class SMTPClient {
         try (FileInputStream fis = new FileInputStream("config.properties")) {
             config.load(fis);
         }
+        
+        // Cargar variables de entorno si están disponibles
+        String smtpHost = System.getenv("SMTP_HOST");
+        if (smtpHost != null) config.setProperty("mail.smtp.host", smtpHost);
+        
+        String smtpPort = System.getenv("SMTP_PORT");
+        if (smtpPort != null) config.setProperty("mail.smtp.port", smtpPort);
     }
     
     private void setupSession() {
