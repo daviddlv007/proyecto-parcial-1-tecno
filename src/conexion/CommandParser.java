@@ -8,12 +8,19 @@ import java.util.regex.Pattern;
 /**
  * Parser de comandos desde el Subject del correo
  * Formato esperado: COMANDO["param1","param2",...]
+ * 
+ * Comandos soportados:
+ * - AYUDA (sin parámetros)
+ * - LISUSU["*"] o LISUSU["patron"]
+ * - INSUSU["nombre","apellido","email",...] (7 parámetros)
+ * - MODUSU["id","nombre","apellido",...] (8 parámetros)
+ * - DELUSU["id"]
+ * - Similar para: ACT, VEH, SES, INS, PAG, etc.
  */
 public class CommandParser {
     
     /**
      * Parsea el subject del correo y extrae comando y parámetros
-     * @return Comando con nombre y parámetros parseados
      */
     public static Comando parse(String subject) {
         if (subject == null || subject.trim().isEmpty()) {
@@ -22,21 +29,19 @@ public class CommandParser {
         
         subject = subject.trim();
         
-        // Patrón: COMANDO o COMANDO["param1","param2"]
-        // Primero extraemos el comando (todo antes del [ o el final)
-        Pattern commandPattern = Pattern.compile("^([A-Z]+)");
+        // Extraer comando (6 caracteres según clase: 3 orden + 3 tabla)
+        Pattern commandPattern = Pattern.compile("^([A-Z]{6})");
         Matcher commandMatcher = commandPattern.matcher(subject);
         
         if (!commandMatcher.find()) {
-            return new Comando("INVALID", new ArrayList<>(), "No se encontró comando válido");
+            // Intentar comando AYUDA (5 letras)
+            if (subject.toUpperCase().startsWith("AYUDA")) {
+                return new Comando("AYUDA", new ArrayList<>(), null);
+            }
+            return new Comando("INVALID", new ArrayList<>(), "Formato de comando inválido. Use: COMANDO[\"p1\",\"p2\"]");
         }
         
         String comando = commandMatcher.group(1);
-        
-        // Comando AYUDA no necesita parámetros
-        if ("AYUDA".equals(comando)) {
-            return new Comando(comando, new ArrayList<>(), null);
-        }
         
         // Extraer parámetros entre corchetes
         List<String> parametros = new ArrayList<>();
@@ -62,15 +67,82 @@ public class CommandParser {
     }
     
     /**
-     * Valida que el comando sea uno de los permitidos
+     * Valida que el comando sea uno de los permitidos (45 comandos totales)
      */
     public static boolean esComandoValido(String comando) {
         return comando != null && (
+            // Especial
             comando.equals("AYUDA") ||
-            comando.equals("LISPER") ||
-            comando.equals("INSPER") ||
-            comando.equals("MODPER") ||
-            comando.equals("DELPER")
+            
+            // ========== TABLAS CATÁLOGO (20 comandos) ==========
+            
+            // Rol: LIS ROL, INS ROL, MOD ROL, DEL ROL
+            comando.equals("LISROL") ||
+            comando.equals("INSROL") ||
+            comando.equals("MODROL") ||
+            comando.equals("DELROL") ||
+            
+            // Tipo Vehículo: LIS TVH, INS TVH, MOD TVH, DEL TVH
+            comando.equals("LISTVH") ||
+            comando.equals("INSTVH") ||
+            comando.equals("MODTVH") ||
+            comando.equals("DELTVH") ||
+            
+            // Tipo Actividad: LIS TAC, INS TAC, MOD TAC, DEL TAC
+            comando.equals("LISTAC") ||
+            comando.equals("INSTAC") ||
+            comando.equals("MODTAC") ||
+            comando.equals("DELTAC") ||
+            
+            // Tipo Pago: LIS TPG, INS TPG, MOD TPG, DEL TPG
+            comando.equals("LISTPG") ||
+            comando.equals("INSTPG") ||
+            comando.equals("MODTPG") ||
+            comando.equals("DELTPG") ||
+            
+            // Método Pago: LIS MPG, INS MPG, MOD MPG, DEL MPG
+            comando.equals("LISMPG") ||
+            comando.equals("INSMPG") ||
+            comando.equals("MODMPG") ||
+            comando.equals("DELMPG") ||
+            
+            // ========== TABLAS PRINCIPALES (24 comandos) ==========
+            
+            // Usuario: LIS USU, INS USU, MOD USU, DEL USU
+            comando.equals("LISUSU") ||
+            comando.equals("INSUSU") ||
+            comando.equals("MODUSU") ||
+            comando.equals("DELUSU") ||
+            
+            // Vehículo: LIS VEH, INS VEH, MOD VEH, DEL VEH
+            comando.equals("LISVEH") ||
+            comando.equals("INSVEH") ||
+            comando.equals("MODVEH") ||
+            comando.equals("DELVEH") ||
+            
+            // Actividad: LIS ACT, INS ACT, MOD ACT, DEL ACT
+            comando.equals("LISACT") ||
+            comando.equals("INSACT") ||
+            comando.equals("MODACT") ||
+            comando.equals("DELACT") ||
+            
+            // Sesión: LIS SES, INS SES, MOD SES, DEL SES
+            comando.equals("LISSES") ||
+            comando.equals("INSSES") ||
+            comando.equals("MODSES") ||
+            comando.equals("DELSES") ||
+            
+            // Inscripción: LIS INS, INS INS, MOD INS, DEL INS
+            comando.equals("LISINS") ||
+            comando.equals("INSINS") ||
+            comando.equals("MODINS") ||
+            comando.equals("DELINS") ||
+            
+            // Pago: LIS PAG, INS PAG, MOD PAG, DEL PAG
+            comando.equals("LISPAG") ||
+            comando.equals("INSPAG") ||
+            comando.equals("MODPAG") ||
+            comando.equals("DELPAG")
         );
     }
     
@@ -104,13 +176,21 @@ public class CommandParser {
             return error;
         }
         
-        public int cantidadParametros() {
-            return parametros.size();
+        public String getMensajeError() {
+            return error;
+        }
+        
+        public boolean esValido() {
+            return esComandoValido(nombre);
         }
         
         @Override
         public String toString() {
-            return String.format("Comando[%s, params=%d]", nombre, parametros.size());
+            return "Comando{" +
+                   "nombre='" + nombre + '\'' +
+                   ", parametros=" + parametros +
+                   ", error='" + error + '\'' +
+                   '}';
         }
     }
 }

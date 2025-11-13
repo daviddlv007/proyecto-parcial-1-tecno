@@ -52,14 +52,25 @@ public class DBConnection {
 
         String url = String.format("jdbc:postgresql://%s:%s/%s", host, port, dbName);
         
-        System.out.println("Conectando a base de datos: " + url);
+        // System.out.println("Conectando a base de datos: " + url);
         connection = DriverManager.getConnection(url, user, password);
-        System.out.println("✓ Conexión exitosa a PostgreSQL");
+        // System.out.println("✓ Conexión exitosa a PostgreSQL");
     }
 
     public static DBConnection getInstance() throws SQLException, IOException {
-        if (instance == null || instance.connection.isClosed()) {
+        if (instance == null) {
             instance = new DBConnection();
+        } else {
+            // Validar si la conexión sigue viva
+            try {
+                if (instance.connection.isClosed() || !instance.connection.isValid(2)) {
+                    System.out.println("⚠ Reconectando a base de datos...");
+                    instance.connect();
+                }
+            } catch (SQLException e) {
+                System.out.println("⚠ Reconectando a base de datos...");
+                instance.connect();
+            }
         }
         return instance;
     }
@@ -72,10 +83,10 @@ public class DBConnection {
         try {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
-                System.out.println("✓ Conexión a DB cerrada");
+                // System.out.println("✓ Conexión a DB cerrada");
             }
         } catch (SQLException e) {
-            System.err.println("Error al cerrar conexión: " + e.getMessage());
+            System.err.println("❌ Error cerrando conexión BD: " + e.getMessage());
         }
     }
 }

@@ -1,24 +1,30 @@
-FROM eclipse-temurin:11-jdk-alpine
+# Dockerfile para producción - Proyecto Email Sistema
+# Grupo 17SA - TecnoWeb
 
+FROM eclipse-temurin:11-jdk-jammy
+
+# Instalar netcat para health checks
+RUN apt-get update && apt-get install -y netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+# Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar dependencias
-COPY lib/ /app/lib/
+# Copiar librerías
+COPY lib/*.jar /app/lib/
 
-# Copiar código fuente
-COPY src/ /app/src/
+# Copiar archivos compilados (se compilan en build stage)
+COPY src /app/src
 
-# Compilar aplicación
-RUN javac -d /app/bin -cp "/app/lib/*" \
-    /app/src/datos/*.java \
-    /app/src/conexion/*.java \
-    /app/src/negocio/*.java \
-    /app/src/servicio/*.java \
-    /app/src/Main.java \
-    /app/src/SimuladorComandos.java
-
-# Copiar configuración
+# Copiar configuración de producción
 COPY config.properties /app/
 
-# Comando por defecto
+# Compilar el proyecto
+RUN javac -d /app/bin \
+    -cp "/app/lib/*" \
+    $(find /app/src -name "*.java")
+
+# Variable de entorno para Java
+ENV CLASSPATH="/app/bin:/app/lib/*"
+
+# Comando de inicio
 CMD ["java", "-cp", "/app/bin:/app/lib/*", "Main"]

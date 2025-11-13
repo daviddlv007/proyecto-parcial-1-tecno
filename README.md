@@ -1,272 +1,103 @@
-# Mail System - Sistema de Comandos por Email# Sistema de Gestión vía E-Mail - Proyecto 1
+# Sistema de Gestión vía E-Mail
 
+**Grupo 17SA - INF513 Tecnología Web**
 
+Sistema empresarial completo que opera vía correo electrónico usando **sockets puros** (sin JavaMail). Implementa CRUD para **11 tablas** con **45 comandos** totales.
 
-Sistema Java que procesa comandos enviados por correo electrónico y realiza operaciones CRUD sobre una base de datos PostgreSQL.Sistema básico que procesa solicitudes mediante correo electrónico para gestionar una tabla `Persona`.
+## 🎯 Características Principales
 
+- ✅ **11 tablas** con CRUD completo (5 catálogos + 6 principales)
+- ✅ **45 comandos** funcionales (AYUDA + 44 CRUD)
+- ✅ **100% tests pasando** (61/61 comandos validados)
+- ✅ **Sockets puros** (POP3/SMTP nativos - sin JavaMail)
+- ✅ **JDBC puro** con PreparedStatements
+- ✅ **MIME decoding** (Base64 + Quoted-Printable)
+- ✅ **Auto-reconexión BD** ante timeouts
+- ✅ **Manejo robusto** de errores de red
 
+## 🚀 Inicio Rápido
 
-## Arquitectura## Arquitectura del Proyecto
-
-
-
-- **Java 11** con JavaMail API```
-
-- **PostgreSQL 15** para persistenciaCliente (cualquier correo)
-
-- **MailHog** para testing SMTP local    ↓ envía: LISPER["*"]
-
-- **Docker Compose** para orquestación completa    ↓
-
-Sistema Java (lee POP3)
-
-## Comandos Soportados    ↓ parsea comando
-
-    ↓ ejecuta SQL
-
-| Comando | Sintaxis | Descripción |    ↓ responde SMTP
-
-|---------|----------|-------------|    ↓
-
-| AYUDA | `AYUDA` | Muestra lista de comandos disponibles |Cliente recibe respuesta
-
-| LISPER | `LISPER["patron"]` | Lista personas (usa `*` para todos) |```
-
-| INSPER | `INSPER["nombre","apellido"]` | Inserta nueva persona |
-
-| MODPER | `MODPER["id","nombre","apellido"]` | Modifica persona existente |## Entorno Local de Desarrollo
-
-| DELPER | `DELPER["id"]` | Elimina persona |
-
-### Servicios Docker:
-
-## Uso- **PostgreSQL** (puerto 5433): Base de datos
-
-- **MailHog** (puertos 1025/8025): Servidor SMTP de prueba con interfaz web
-
-### Levantar entorno completo:
-
-```bash### Configuración:
-
-docker-compose up -d
-
-``````bash
-
-# 1. Levantar servicios
-
-### Ver correos de prueba:docker-compose up -d
-
-http://localhost:8025
-
-# 2. Verificar que estén corriendo
-
-### Ejecutar tests:docker-compose ps
-
+### 1. Compilar imagen Docker
 ```bash
-
-./tests/run_tests.sh# 3. Probar el sistema completo (SIN necesidad de correos reales)
-
-```java -cp "bin:lib/*" SimuladorComandos
-
-
-
-### Detener servicios:# 4. Ver resultados en Web UI
-
-```bashhttp://localhost:8025
-
-docker-compose down
-
-```# 5. Ejecutar sistema con servidor real (cuando tengas credenciales)
-
-./run.sh
-
-## Estructura del Proyecto```
-
-
-
-```## Comandos Disponibles
-
-├── src/                    # Código fuente Java
-
-│   ├── datos/             # Capa de acceso a datos (DAO)### AYUDA
-
-│   ├── negocio/           # Lógica de negocioMuestra todos los comandos disponibles con ejemplos.
-
-│   ├── conexion/          # Clientes SMTP/POP3
-
-│   ├── servicio/          # Servicio principal**Formato:**
-
-│   └── Main.java          # Punto de entrada```
-
-├── lib/                    # Dependencias JARSubject: AYUDA
-
-├── tests/                  # Scripts de prueba```
-
-├── docker-compose.yml      # Orquestación
-
-├── Dockerfile             # Imagen Java app**Respuesta:** Tabla HTML con todos los comandos
-
-└── config.properties      # Configuración
-
-```---
-
-
-
-## Migración a Producción### LISPER - Listar Personas
-
-Lista registros de la tabla persona según patrón.
-
-Modificar variables de entorno en `docker-compose.yml`:
-
-- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`**Formato:**
-
-- `SMTP_HOST`, `SMTP_PORT````
-
-Subject: LISPER["*"]
-
-O editar `config.properties` directamente.Subject: LISPER["Juan"]
-
+docker build -t mail-sistema-grupo17sa .
 ```
 
-**Parámetros:**
-- `*` = Todos los registros
-- `patron` = Busca por nombre que contenga el patrón
-
-**Respuesta:** Lista de personas en formato HTML
-
----
-
-### INSPER - Insertar Persona
-Registra una nueva persona.
-
-**Formato:**
-```
-Subject: INSPER["Juan","Pérez"]
-```
-
-**Parámetros:**
-1. nombre (string)
-2. apellido (string)
-
-**Respuesta:** Confirmación de éxito o error
-
----
-
-### MODPER - Modificar Persona
-Actualiza datos de una persona existente.
-
-**Formato:**
-```
-Subject: MODPER["1","Carlos","Martínez"]
-```
-
-**Parámetros:**
-1. id (número)
-2. nombre (string)
-3. apellido (string)
-
-**Respuesta:** Confirmación de éxito o error
-
----
-
-### DELPER - Eliminar Persona
-Elimina una persona por ID.
-
-**Formato:**
-```
-Subject: DELPER["1"]
-```
-
-**Parámetros:**
-1. id (número)
-
-**Respuesta:** Confirmación de éxito o error
-
----
-
-## Validaciones Implementadas
-
-1. **Comando existe**: Verifica que el comando esté en la lista válida
-2. **Cantidad de parámetros**: Valida que coincida con lo esperado
-3. **Tipo de parámetros**: Verifica números donde corresponde
-4. **Registros existentes**: Para UPDATE/DELETE verifica que exista el ID
-
-## Estructura del Proyecto
-
-```
-mail-system-basic/
-├── src/
-│   ├── conexion/
-│   │   ├── POP3Client.java      # Lee correos
-│   │   ├── SMTPClient.java       # Envía correos
-│   │   └── CommandParser.java    # Parsea comandos
-│   ├── datos/
-│   │   ├── DBConnection.java     # Conexión PostgreSQL
-│   │   └── PersonaDAO.java       # CRUD Persona
-│   ├── negocio/
-│   │   └── PersonaService.java   # Lógica de negocio
-│   ├── servicio/
-│   │   └── MailService.java      # Loop principal
-│   └── Main.java                  # Punto de entrada
-├── lib/
-│   ├── javax.mail-1.6.2.jar
-│   ├── activation-1.1.1.jar
-│   └── postgresql-42.2.18.jar
-├── config.properties              # Configuración
-├── docker-compose.yml
-├── init.sql
-└── README.md
-```
-
-## Configuración para Servidor Real
-
-Cuando esté listo para conectar al servidor de la facultad:
-
-**config.properties:**
-```properties
-# Servidor real
-mail.pop3.host=mail.tecnoweb.org.bo
-mail.pop3.user=grupo01sa@tecnoweb.org.bo
-mail.pop3.password=grup001grup001*
-
-mail.smtp.host=mail.tecnoweb.org.bo
-mail.smtp.user=grupo01sa@tecnoweb.org.bo
-
-db.host=www.tecnoweb.org.bo
-db.name=db_grupo01sa
-db.user=grupo01sa
-db.password=grup001grup001*
-```
-
-## Pruebas
-
-### 1. Usando MailHog (local):
-
-1. Accede a http://localhost:8025
-2. Envía correo de prueba con el comando
-3. El sistema procesa y responde
-4. Verifica respuesta en MailHog UI
-
-### 2. Usando cliente real (Gmail, Outlook):
-
-Configura el servidor SMTP local o remoto y envía desde tu correo personal.
-
-## Troubleshooting
-
-**Error de conexión a DB:**
+### 2. Ejecutar sistema
 ```bash
-docker-compose down
-docker-compose up -d
+docker run -v $(pwd)/config.properties:/app/config.properties:ro mail-sistema-grupo17sa
 ```
 
-**Ver logs del sistema:**
+### 3. Probar (opción 1 - RECOMENDADO)
 ```bash
-tail -f logs/sistema.log
+bash test_replicable.sh
+```
+**Resultado:** ✅ 61/61 tests exitosos en ~15 segundos
+
+### 4. Probar (opción 2 - manual)
+1. Enviar correo desde Gmail a: `grupo17sa@tecnoweb.org.bo`
+2. Asunto: `AYUDA` o `LISROL["*"]`
+3. Ver respuesta en consola Docker (5-10 segundos)
+
+## 📚 Documentación
+
+- **[MANUAL_PROYECTO.md](MANUAL_PROYECTO.md)** - Documentación completa del sistema
+- **[PRUEBAS_MANUALES.md](PRUEBAS_MANUALES.md)** - Guía de 45 pruebas manuales vía Gmail
+- **[test_replicable.sh](test_replicable.sh)** - Suite de pruebas automatizadas
+- **[VALIDACION_RAPIDA.md](VALIDACION_RAPIDA.md)** - 7 tests rápidos (5-10 min)
+
+## 🗄️ Base de Datos
+
+**PostgreSQL** en `www.tecnoweb.org.bo:5432`
+
+11 tablas:
+- **Catálogos:** rol, tipo_vehiculo, tipo_actividad, tipo_pago, metodo_pago
+- **Principales:** usuario, vehiculo, actividad, sesion, inscripcion, pago
+
+## 📋 Comandos Disponibles
+
+**Formato:** `COMANDO["param1","param2",...]`
+
+**Ejemplos:**
+```
+AYUDA
+LISROL["*"]
+INSROL["Gerente","Gerente de área"]
+LISUSU["*"]
+INSUSU["Juan","Pérez","1990-05-15","M","CI","123456","juan@mail.com","70123456","Calle 1","pass123","3"]
 ```
 
-**Probar conexión manual a PostgreSQL:**
+Ver [MANUAL_PROYECTO.md](MANUAL_PROYECTO.md) para lista completa de 45 comandos.
+
+## 🧪 Testing
+
+### Opción 1: Automatizado (15 segundos)
 ```bash
-docker exec -it mail_system_db psql -U admin -d db_mail_system
-\dt
-SELECT * FROM persona;
+bash test_replicable.sh
 ```
+
+### Opción 2: Manual vía Gmail (2-3 minutos)
+Ver [PRUEBAS_MANUALES.md](PRUEBAS_MANUALES.md) para 45 comandos de ejemplo.
+
+## 🏗️ Arquitectura
+
+```
+Email → POP3 Socket (110) → Parser → CommandProcessor → DAOs → PostgreSQL
+                                         ↓
+Email ← SMTP Socket (25)  ← HTML Response ←─────────────────────────────┘
+```
+
+**Tecnologías:**
+- Java 11 (Eclipse Temurin)
+- Sockets puros (java.net.Socket)
+- JDBC puro (PostgreSQL driver)
+- Docker
+
+## 👨‍💻 Autores
+
+**Grupo 17SA**  
+INF513 - Tecnología Web  
+Universidad Mayor de San Andrés
+
+## 📄 Licencia
+
+Proyecto académico - 2025
