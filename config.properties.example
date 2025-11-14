@@ -1,28 +1,30 @@
 # Configuración generada desde variables de entorno
 # Grupo 17SA - Docker Environment
+# ESTE ARCHIVO SE GENERA AUTOMÁTICAMENTE DESDE docker-entrypoint.sh
+# NO EDITAR MANUALMENTE - USAR VARIABLES DE ENTORNO
 
 # ==== CORREO SMTP (Enviar respuestas) ====
 mail.sender.type=MAILERSEND
 mail.smtp.host=mail.tecnoweb.org.bo
-mail.smtp.user=grupo17sa@tecnoweb.org.bo
+mail.smtp.user=tu-email@tecnoweb.org.bo
 
 # ==== MailerSend API (alternativa a SMTP) ====
-mailersend.api.token=mlsn.30fc3ce01ff3a145b1205a2ee2aec51a3e3d5c71f7f9668d0187b0892f17af92
-mailersend.from.email=no-reply@test-eqvygm05qr5l0p7w.mlsender.net
+mailersend.api.token=TU_MAILERSEND_API_TOKEN_AQUI
+mailersend.from.email=tu-email@mlsender.net
 mailersend.from.name=Grupo 17SA
 
 # ==== CORREO POP3 (Leer correos entrantes) ====
 mail.pop3.host=mail.tecnoweb.org.bo
 mail.pop3.port=110
-mail.pop3.user=grupo17sa
-mail.pop3.password=grup017grup017*
+mail.pop3.user=tu-usuario
+mail.pop3.password=TU_PASSWORD_POP3_AQUI
 
 # ==== BASE DE DATOS ====
 db.host=mail.tecnoweb.org.bo
 db.port=5432
-db.name=db_grupo17sa
-db.user=grupo17sa
-db.password=grup017grup017*
+db.name=tu-base-datos
+db.user=tu-usuario-db
+db.password=TU_PASSWORD_DB_AQUI
 
 # ==== SISTEMA ====
 mail.check.interval=5000

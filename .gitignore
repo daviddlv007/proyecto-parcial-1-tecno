@@ -8,6 +8,7 @@ logs/
 
 # Ignorar archivos de configuración con credenciales
 .env
+config.properties
 config.local.properties
 
 # Ignorar archivos del IDE
