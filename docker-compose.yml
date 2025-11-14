@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: email-app
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - email-network
+
+networks:
+  email-network:
+    driver: bridge

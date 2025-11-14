@@ -152,4 +152,29 @@ public class UsuarioDAO {
         
         return rowsAffected > 0;
     }
+    
+    // === MÉTODO PARA REPORTES ===
+    public java.util.Map<String, Integer> contarPorRol() {
+        java.util.Map<String, Integer> resultado = new java.util.LinkedHashMap<>();
+        try {
+            Connection conn = DBConnection.getInstance().getConnection();
+            String sql = "SELECT r.nombre_rol, COUNT(*) as cantidad " +
+                        "FROM usuario u " +
+                        "JOIN rol r ON u.rol_id = r.id " +
+                        "WHERE u.estado_usuario='activo' " +
+                        "GROUP BY r.nombre_rol ORDER BY cantidad DESC";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                resultado.put(rs.getString("nombre_rol"), rs.getInt("cantidad"));
+            }
+            
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return resultado;
+    }
 }

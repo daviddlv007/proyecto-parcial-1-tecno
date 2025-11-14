@@ -54,29 +54,31 @@ public class SMTPClientSocket {
                 salida.writeBytes(comando);
                 System.out.println("S: " + getMultiline(entrada));
                 
-                // MAIL FROM
-                comando = "MAIL FROM: " + user_emisor + " \r\n";
+                // MAIL FROM (con formato RFC: <email>)
+                comando = "MAIL FROM:<" + user_emisor + ">\r\n";
                 System.out.print("C: " + comando);
                 salida.writeBytes(comando);
                 System.out.println("S: " + entrada.readLine());
                 
-                // RCPT TO
-                comando = "RCPT TO: " + user_receptor + " \r\n";
+                // RCPT TO (con formato RFC: <email>)
+                comando = "RCPT TO:<" + user_receptor + ">\r\n";
                 System.out.print("C: " + comando);
                 salida.writeBytes(comando);
                 System.out.println("S: " + entrada.readLine());
                 
                 // DATA
-                comando = "DATA\n";
+                comando = "DATA\r\n";
                 System.out.print("C: " + comando);
                 salida.writeBytes(comando);
                 System.out.println("S: " + getMultiline(entrada));
                 
-                // Subject + Body
-                comando = "Subject: " + subject + "\r\n" +
+                // Headers + Body (con From y To según RFC)
+                comando = "From: " + user_emisor + "\r\n" +
+                         "To: " + user_receptor + "\r\n" +
+                         "Subject: " + subject + "\r\n" +
                          "Content-Type: text/html; charset=utf-8\r\n" +
                          "\r\n" +
-                         body + "\n" +
+                         body + "\r\n" +
                          ".\r\n";
                 System.out.print("C: [MENSAJE ENVIADO]\n");
                 salida.writeBytes(comando);

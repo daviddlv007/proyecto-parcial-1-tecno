@@ -142,7 +142,13 @@ public class CommandParser {
             comando.equals("LISPAG") ||
             comando.equals("INSPAG") ||
             comando.equals("MODPAG") ||
-            comando.equals("DELPAG")
+            comando.equals("DELPAG") ||
+            
+            // ========== REPORTES Y ESTADÍSTICAS (4 comandos) ==========
+            comando.equals("REPACT") ||
+            comando.equals("REPUSU") ||
+            comando.equals("REPVEH") ||
+            comando.equals("REPPAG")
         );
     }
     

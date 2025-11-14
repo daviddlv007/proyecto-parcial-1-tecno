@@ -6,7 +6,8 @@ bin/
 logs/
 *.log
 
-# Ignorar archivos de configuración local
+# Ignorar archivos de configuración con credenciales
+.env
 config.local.properties
 
 # Ignorar archivos del IDE

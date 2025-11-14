@@ -11,7 +11,6 @@ import java.util.Properties;
  */
 public class Main {
 
-    private static final boolean HABILITAR_SMTP_RESPUESTA = false;
     private static final int INTERVALO_REVISION_SEGUNDOS = 5;
     private static Properties config;
     private static CommandProcessor processor;
@@ -109,8 +108,15 @@ public class Main {
             if (comando.tieneError()) {
                 String errorMsg = comando.getMensajeError();
                 System.out.println("❌ " + errorMsg);
-                enviarRespuesta(email.getFrom(), "Error en comando", 
-                    "<h3>Error</h3><p>" + errorMsg + "</p>");
+                
+                // Enviar tabla de ayuda junto con el error
+                String ayudaHTML = processor.procesarComando(CommandParser.parse("AYUDA"));
+                String errorHTML = "<div style='background:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin-bottom:20px;'>" +
+                                  "<h3 style='color:#856404;margin-top:0;'>❌ Error en el Comando</h3>" +
+                                  "<p style='color:#856404;'>" + errorMsg + "</p>" +
+                                  "</div>" + ayudaHTML;
+                
+                enviarRespuesta(email.getFrom(), "Error - Comando mal formateado", errorHTML);
                 pop3.deleteMessage(numero);
                 return;
             }
@@ -118,8 +124,16 @@ public class Main {
             if (!comando.esValido()) {
                 String errorMsg = "Comando '" + comando.getNombre() + "' no reconocido";
                 System.out.println("❌ " + errorMsg);
-                enviarRespuesta(email.getFrom(), "Error - Comando no válido", 
-                    "<h3>Error</h3><p>" + errorMsg + "</p>");
+                
+                // Enviar tabla de ayuda junto con el error
+                String ayudaHTML = processor.procesarComando(CommandParser.parse("AYUDA"));
+                String errorHTML = "<div style='background:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin-bottom:20px;'>" +
+                                  "<h3 style='color:#856404;margin-top:0;'>❌ Comando No Reconocido</h3>" +
+                                  "<p style='color:#856404;'>" + errorMsg + "</p>" +
+                                  "<p style='color:#856404;'>Por favor, consulte la tabla de comandos disponibles a continuación:</p>" +
+                                  "</div>" + ayudaHTML;
+                
+                enviarRespuesta(email.getFrom(), "Error - Comando no válido", errorHTML);
                 pop3.deleteMessage(numero);
                 return;
             }
@@ -142,21 +156,44 @@ public class Main {
     }
     
     private static void enviarRespuesta(String destinatario, String subject, String htmlBody) {
-        if (HABILITAR_SMTP_RESPUESTA) {
-            try {
-                String smtpHost = config.getProperty("mail.smtp.host");
+        try {
+            String senderType = config.getProperty("mail.sender.type", "MAILERSEND");
+            
+            if ("SOCKET".equalsIgnoreCase(senderType)) {
+                // Modo 1: Socket SMTP puro (puerto 25) - Solo desde red de facultad
+                String smtpHost = config.getProperty("mail.smtp.host", "mail.tecnoweb.org.bo");
                 String smtpUser = config.getProperty("mail.smtp.user");
                 
                 SMTPClientSocket smtp = new SMTPClientSocket(smtpHost, smtpUser);
                 smtp.sendEmail(destinatario, subject, htmlBody);
                 
-                System.out.println("  ✉ Respuesta enviada por SMTP a: " + destinatario);
+                System.out.println("✓ Correo enviado exitosamente vía SMTP Socket (puerto 25)");
+                System.out.println("  ✉ Destinatario: " + destinatario);
                 
-            } catch (Exception e) {
-                System.err.println("  Error enviando SMTP: " + e.getMessage());
-                mostrarRespuestaEnConsola(destinatario, subject, htmlBody);
+            } else {
+                // Modo 2: MailerSend API (puerto 443 HTTPS) - Funciona desde cualquier ubicación
+                String apiToken = config.getProperty("mailersend.api.token");
+                String fromEmail = config.getProperty("mailersend.from.email");
+                String fromName = config.getProperty("mailersend.from.name", "Grupo 17SA");
+                
+                if (apiToken == null || apiToken.trim().isEmpty()) {
+                    throw new Exception("mailersend.api.token no configurado");
+                }
+                
+                MailerSendClient mailersend = new MailerSendClient(apiToken, fromEmail, fromName);
+                mailersend.sendEmail(destinatario, subject, htmlBody);
+                
+                System.out.println("✓ Correo enviado exitosamente vía MailerSend API");
+                System.out.println("  ✉ Destinatario: " + destinatario);
             }
-        } else {
+            
+        } catch (Exception e) {
+            System.err.println("  ❌ Error enviando respuesta por correo:");
+            System.err.println("     " + e.getMessage());
+            e.printStackTrace();
+            
+            // Fallback: mostrar en consola si falla el envío
+            System.out.println("  ⚠️  Mostrando respuesta en consola como fallback:");
             mostrarRespuestaEnConsola(destinatario, subject, htmlBody);
         }
     }

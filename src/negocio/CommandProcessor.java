@@ -1,14 +1,17 @@
 package negocio;
 
 import conexion.CommandParser;
+import conexion.HTMLResponseBuilder;
 import datos.*;
 import java.util.List;
 
 /**
  * Procesador de comandos COMPLETO - Lógica de negocio
- * Soporta CRUD para las 11 tablas del sistema (44 comandos + AYUDA = 45 total)
+ * Soporta CRUD para las 11 tablas del sistema (44 comandos + AYUDA + 4 REPORTES = 49 total)
  */
 public class CommandProcessor {
+    
+    private ReportGenerator reportGenerator = new ReportGenerator();
     
     // DAOs para tablas catálogo
     private RolDAO rolDAO = new RolDAO();
@@ -34,6 +37,12 @@ public class CommandProcessor {
             List<String> params = comando.getParametros();
             
             if ("AYUDA".equals(cmd)) return generarAyuda();
+            
+            // ==================== REPORTES Y ESTADÍSTICAS ====================
+            if ("REPACT".equals(cmd)) return reportGenerator.reporteActividadesPorTipo();
+            if ("REPUSU".equals(cmd)) return reportGenerator.reporteUsuariosPorRol();
+            if ("REPVEH".equals(cmd)) return reportGenerator.reporteVehiculosPorTipo();
+            if ("REPPAG".equals(cmd)) return reportGenerator.reportePagosPorMetodo();
             
             // ==================== TABLAS CATÁLOGO ====================
             
@@ -211,8 +220,14 @@ public class CommandProcessor {
             
             return generarError("Comando no reconocido: " + cmd);
             
+        } catch (IndexOutOfBoundsException e) {
+            // Parámetros faltantes o malformados
+            return generarError("Parámetros faltantes o formato incorrecto. Use AYUDA para ver el formato correcto.");
+        } catch (NumberFormatException e) {
+            // Error al convertir string a número
+            return generarError("Formato numérico inválido en parámetros: " + e.getMessage());
         } catch (Exception e) {
-            // Imprimir stack trace completo en consola para debugging
+            // Error general - imprimir stack trace para debugging
             System.err.println("========================================");
             System.err.println("EXCEPCIÓN EN COMANDO: " + comando.getNombre());
             System.err.println("PARAMETROS: " + comando.getParametros());
@@ -222,7 +237,7 @@ public class CommandProcessor {
             // Generar mensaje de error informativo
             String mensaje = e.getMessage();
             if (mensaje == null || mensaje.isEmpty()) {
-                mensaje = e.getClass().getSimpleName() + " - revise logs para detalles";
+                mensaje = e.getClass().getSimpleName();
             }
             return generarError("Error procesando comando: " + mensaje);
         }
@@ -234,18 +249,25 @@ public class CommandProcessor {
         try {
             List<Rol> roles = rolDAO.listar(patron);
             if (roles.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron roles</strong>");
+                return HTMLResponseBuilder.wrapHTML("Roles", 
+                    HTMLResponseBuilder.info("No se encontraron roles"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ ROLES ═══</strong>\n\n");
-            for (Rol r : roles) {
-                html.append("<strong>ID:</strong> ").append(r.getId()).append("\n");
-                html.append("  • Nombre: ").append(r.getNombre()).append("\n");
-                html.append("  • Descripción: ").append(r.getDescripcion()).append("\n");
-                html.append("  • Activo: ").append(r.isActivo() ? "Sí" : "No").append("\n\n");
+            String[][] rows = new String[roles.size()][4];
+            for (int i = 0; i < roles.size(); i++) {
+                Rol r = roles.get(i);
+                rows[i][0] = String.valueOf(r.getId());
+                rows[i][1] = r.getNombre();
+                rows[i][2] = r.getDescripcion();
+                rows[i][3] = r.isActivo() ? "✓ Activo" : "✗ Inactivo";
             }
-            html.append("<strong>Total: ").append(roles.size()).append(" roles</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre", "Descripción", "Estado"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + roles.size() + " roles</p>";
+            return HTMLResponseBuilder.wrapHTML("Roles", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando roles: " + e.getMessage());
         }
@@ -255,18 +277,25 @@ public class CommandProcessor {
         try {
             List<TipoVehiculo> tipos = tipoVehiculoDAO.listar(patron);
             if (tipos.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron tipos de vehículo</strong>");
+                return HTMLResponseBuilder.wrapHTML("Tipos de Vehículo", 
+                    HTMLResponseBuilder.info("No se encontraron tipos de vehículo"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ TIPOS DE VEHÍCULO ═══</strong>\n\n");
-            for (TipoVehiculo t : tipos) {
-                html.append("<strong>ID:</strong> ").append(t.getId()).append("\n");
-                html.append("  • Nombre: ").append(t.getNombre()).append("\n");
-                html.append("  • Descripción: ").append(t.getDescripcion()).append("\n");
-                html.append("  • Activo: ").append(t.isActivo() ? "Sí" : "No").append("\n\n");
+            String[][] rows = new String[tipos.size()][4];
+            for (int i = 0; i < tipos.size(); i++) {
+                TipoVehiculo t = tipos.get(i);
+                rows[i][0] = String.valueOf(t.getId());
+                rows[i][1] = t.getNombre();
+                rows[i][2] = t.getDescripcion();
+                rows[i][3] = t.isActivo() ? "✓ Activo" : "✗ Inactivo";
             }
-            html.append("<strong>Total: ").append(tipos.size()).append(" tipos</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre", "Descripción", "Estado"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + tipos.size() + " tipos</p>";
+            return HTMLResponseBuilder.wrapHTML("Tipos de Vehículo", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando tipos de vehículo: " + e.getMessage());
         }
@@ -276,18 +305,25 @@ public class CommandProcessor {
         try {
             List<TipoActividad> tipos = tipoActividadDAO.listar(patron);
             if (tipos.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron tipos de actividad</strong>");
+                return HTMLResponseBuilder.wrapHTML("Tipos de Actividad", 
+                    HTMLResponseBuilder.info("No se encontraron tipos de actividad"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ TIPOS DE ACTIVIDAD ═══</strong>\n\n");
-            for (TipoActividad t : tipos) {
-                html.append("<strong>ID:</strong> ").append(t.getId()).append("\n");
-                html.append("  • Nombre: ").append(t.getNombre()).append("\n");
-                html.append("  • Descripción: ").append(t.getDescripcion()).append("\n");
-                html.append("  • Activo: ").append(t.isActivo() ? "Sí" : "No").append("\n\n");
+            String[][] rows = new String[tipos.size()][4];
+            for (int i = 0; i < tipos.size(); i++) {
+                TipoActividad t = tipos.get(i);
+                rows[i][0] = String.valueOf(t.getId());
+                rows[i][1] = t.getNombre();
+                rows[i][2] = t.getDescripcion();
+                rows[i][3] = t.isActivo() ? "✓ Activo" : "✗ Inactivo";
             }
-            html.append("<strong>Total: ").append(tipos.size()).append(" tipos</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre", "Descripción", "Estado"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + tipos.size() + " tipos</p>";
+            return HTMLResponseBuilder.wrapHTML("Tipos de Actividad", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando tipos de actividad: " + e.getMessage());
         }
@@ -297,18 +333,25 @@ public class CommandProcessor {
         try {
             List<TipoPago> tipos = tipoPagoDAO.listar(patron);
             if (tipos.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron tipos de pago</strong>");
+                return HTMLResponseBuilder.wrapHTML("Tipos de Pago", 
+                    HTMLResponseBuilder.info("No se encontraron tipos de pago"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ TIPOS DE PAGO ═══</strong>\n\n");
-            for (TipoPago t : tipos) {
-                html.append("<strong>ID:</strong> ").append(t.getId()).append("\n");
-                html.append("  • Nombre: ").append(t.getNombre()).append("\n");
-                html.append("  • Descripción: ").append(t.getDescripcion()).append("\n");
-                html.append("  • Activo: ").append(t.isActivo() ? "Sí" : "No").append("\n\n");
+            String[][] rows = new String[tipos.size()][4];
+            for (int i = 0; i < tipos.size(); i++) {
+                TipoPago t = tipos.get(i);
+                rows[i][0] = String.valueOf(t.getId());
+                rows[i][1] = t.getNombre();
+                rows[i][2] = t.getDescripcion();
+                rows[i][3] = t.isActivo() ? "✓ Activo" : "✗ Inactivo";
             }
-            html.append("<strong>Total: ").append(tipos.size()).append(" tipos</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre", "Descripción", "Estado"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + tipos.size() + " tipos</p>";
+            return HTMLResponseBuilder.wrapHTML("Tipos de Pago", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando tipos de pago: " + e.getMessage());
         }
@@ -318,18 +361,25 @@ public class CommandProcessor {
         try {
             List<MetodoPago> metodos = metodoPagoDAO.listar(patron);
             if (metodos.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron métodos de pago</strong>");
+                return HTMLResponseBuilder.wrapHTML("Métodos de Pago", 
+                    HTMLResponseBuilder.info("No se encontraron métodos de pago"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ MÉTODOS DE PAGO ═══</strong>\n\n");
-            for (MetodoPago m : metodos) {
-                html.append("<strong>ID:</strong> ").append(m.getId()).append("\n");
-                html.append("  • Nombre: ").append(m.getNombre()).append("\n");
-                html.append("  • Descripción: ").append(m.getDescripcion()).append("\n");
-                html.append("  • Activo: ").append(m.isActivo() ? "Sí" : "No").append("\n\n");
+            String[][] rows = new String[metodos.size()][4];
+            for (int i = 0; i < metodos.size(); i++) {
+                MetodoPago m = metodos.get(i);
+                rows[i][0] = String.valueOf(m.getId());
+                rows[i][1] = m.getNombre();
+                rows[i][2] = m.getDescripcion();
+                rows[i][3] = m.isActivo() ? "✓ Activo" : "✗ Inactivo";
             }
-            html.append("<strong>Total: ").append(metodos.size()).append(" métodos</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre", "Descripción", "Estado"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + metodos.size() + " métodos</p>";
+            return HTMLResponseBuilder.wrapHTML("Métodos de Pago", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando métodos de pago: " + e.getMessage());
         }
@@ -339,19 +389,26 @@ public class CommandProcessor {
         try {
             List<Usuario> usuarios = usuarioDAO.listar(patron);
             if (usuarios.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron usuarios</strong>");
+                return HTMLResponseBuilder.wrapHTML("Usuarios", 
+                    HTMLResponseBuilder.info("No se encontraron usuarios"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ USUARIOS ═══</strong>\n\n");
-            for (Usuario u : usuarios) {
-                html.append("<strong>ID:</strong> ").append(u.getId()).append("\n");
-                html.append("  • Nombre: ").append(u.getNombre()).append(" ").append(u.getApellido()).append("\n");
-                html.append("  • Email: ").append(u.getEmail()).append("\n");
-                html.append("  • Teléfono: ").append(u.getTelefono()).append("\n");
-                html.append("  • Rol ID: ").append(u.getRolId()).append("\n\n");
+            String[][] rows = new String[usuarios.size()][5];
+            for (int i = 0; i < usuarios.size(); i++) {
+                Usuario u = usuarios.get(i);
+                rows[i][0] = String.valueOf(u.getId());
+                rows[i][1] = u.getNombre() + " " + u.getApellido();
+                rows[i][2] = u.getEmail();
+                rows[i][3] = u.getTelefono();
+                rows[i][4] = "Rol #" + u.getRolId();
             }
-            html.append("<strong>Total: ").append(usuarios.size()).append(" usuarios</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre Completo", "Email", "Teléfono", "Rol"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + usuarios.size() + " usuarios</p>";
+            return HTMLResponseBuilder.wrapHTML("Usuarios", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando usuarios: " + e.getMessage());
         }
@@ -361,18 +418,25 @@ public class CommandProcessor {
         try {
             List<Vehiculo> vehiculos = vehiculoDAO.listar(patron);
             if (vehiculos.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron vehículos</strong>");
+                return HTMLResponseBuilder.wrapHTML("Vehículos", 
+                    HTMLResponseBuilder.info("No se encontraron vehículos"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ VEHÍCULOS ═══</strong>\n\n");
-            for (Vehiculo v : vehiculos) {
-                html.append("<strong>ID:</strong> ").append(v.getId()).append("\n");
-                html.append("  • Placa: ").append(v.getPlaca()).append("\n");
-                html.append("  • Marca/Modelo: ").append(v.getMarca()).append(" ").append(v.getModelo()).append("\n");
-                html.append("  • Año: ").append(v.getAnio()).append("\n\n");
+            String[][] rows = new String[vehiculos.size()][4];
+            for (int i = 0; i < vehiculos.size(); i++) {
+                Vehiculo v = vehiculos.get(i);
+                rows[i][0] = String.valueOf(v.getId());
+                rows[i][1] = v.getPlaca();
+                rows[i][2] = v.getMarca() + " " + v.getModelo();
+                rows[i][3] = String.valueOf(v.getAnio());
             }
-            html.append("<strong>Total: ").append(vehiculos.size()).append(" vehículos</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Placa", "Marca/Modelo", "Año"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + vehiculos.size() + " vehículos</p>";
+            return HTMLResponseBuilder.wrapHTML("Vehículos", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando vehículos: " + e.getMessage());
         }
@@ -382,18 +446,25 @@ public class CommandProcessor {
         try {
             List<Actividad> actividades = actividadDAO.listar(patron);
             if (actividades.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron actividades</strong>");
+                return HTMLResponseBuilder.wrapHTML("Actividades", 
+                    HTMLResponseBuilder.info("No se encontraron actividades"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ ACTIVIDADES ═══</strong>\n\n");
-            for (Actividad a : actividades) {
-                html.append("<strong>ID:</strong> ").append(a.getId()).append("\n");
-                html.append("  • Nombre: ").append(a.getNombre()).append("\n");
-                html.append("  • Tipo ID: ").append(a.getTipoActividadId()).append("\n");
-                html.append("  • Duración: ").append(a.getDuracionHoras()).append(" horas\n\n");
+            String[][] rows = new String[actividades.size()][4];
+            for (int i = 0; i < actividades.size(); i++) {
+                Actividad a = actividades.get(i);
+                rows[i][0] = String.valueOf(a.getId());
+                rows[i][1] = a.getNombre();
+                rows[i][2] = "Tipo #" + a.getTipoActividadId();
+                rows[i][3] = a.getDuracionHoras() + " hrs";
             }
-            html.append("<strong>Total: ").append(actividades.size()).append(" actividades</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Nombre", "Tipo", "Duración"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + actividades.size() + " actividades</p>";
+            return HTMLResponseBuilder.wrapHTML("Actividades", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando actividades: " + e.getMessage());
         }
@@ -403,19 +474,26 @@ public class CommandProcessor {
         try {
             List<Sesion> sesiones = sesionDAO.listar(patron);
             if (sesiones.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron sesiones</strong>");
+                return HTMLResponseBuilder.wrapHTML("Sesiones", 
+                    HTMLResponseBuilder.info("No se encontraron sesiones"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ SESIONES ═══</strong>\n\n");
-            for (Sesion s : sesiones) {
-                html.append("<strong>ID:</strong> ").append(s.getId()).append("\n");
-                html.append("  • Actividad ID: ").append(s.getActividadId()).append("\n");
-                html.append("  • Fecha: ").append(s.getFecha()).append("\n");
-                html.append("  • Horario: ").append(s.getHoraInicio()).append(" - ").append(s.getHoraFin()).append("\n");
-                html.append("  • Instructor ID: ").append(s.getInstructorId()).append("\n\n");
+            String[][] rows = new String[sesiones.size()][5];
+            for (int i = 0; i < sesiones.size(); i++) {
+                Sesion s = sesiones.get(i);
+                rows[i][0] = String.valueOf(s.getId());
+                rows[i][1] = "Act #" + s.getActividadId();
+                rows[i][2] = String.valueOf(s.getFecha());
+                rows[i][3] = s.getHoraInicio() + " - " + s.getHoraFin();
+                rows[i][4] = "Inst #" + s.getInstructorId();
             }
-            html.append("<strong>Total: ").append(sesiones.size()).append(" sesiones</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Actividad", "Fecha", "Horario", "Instructor"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + sesiones.size() + " sesiones</p>";
+            return HTMLResponseBuilder.wrapHTML("Sesiones", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando sesiones: " + e.getMessage());
         }
@@ -425,19 +503,26 @@ public class CommandProcessor {
         try {
             List<Inscripcion> inscripciones = inscripcionDAO.listar(patron);
             if (inscripciones.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron inscripciones</strong>");
+                return HTMLResponseBuilder.wrapHTML("Inscripciones", 
+                    HTMLResponseBuilder.info("No se encontraron inscripciones"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ INSCRIPCIONES ═══</strong>\n\n");
-            for (Inscripcion i : inscripciones) {
-                html.append("<strong>ID:</strong> ").append(i.getId()).append("\n");
-                html.append("  • Alumno ID: ").append(i.getAlumnoId()).append("\n");
-                html.append("  • Sesión ID: ").append(i.getSesionId()).append("\n");
-                html.append("  • Monto: Bs. ").append(i.getMontoTotal()).append("\n");
-                html.append("  • Estado: ").append(i.getEstadoInscripcion()).append("\n\n");
+            String[][] rows = new String[inscripciones.size()][5];
+            for (int i = 0; i < inscripciones.size(); i++) {
+                Inscripcion ins = inscripciones.get(i);
+                rows[i][0] = String.valueOf(ins.getId());
+                rows[i][1] = "Alumno #" + ins.getAlumnoId();
+                rows[i][2] = "Sesión #" + ins.getSesionId();
+                rows[i][3] = "Bs. " + ins.getMontoTotal();
+                rows[i][4] = ins.getEstadoInscripcion();
             }
-            html.append("<strong>Total: ").append(inscripciones.size()).append(" inscripciones</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Alumno", "Sesión", "Monto", "Estado"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + inscripciones.size() + " inscripciones</p>";
+            return HTMLResponseBuilder.wrapHTML("Inscripciones", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando inscripciones: " + e.getMessage());
         }
@@ -447,18 +532,25 @@ public class CommandProcessor {
         try {
             List<Pago> pagos = pagoDAO.listar(patron);
             if (pagos.isEmpty()) {
-                return wrapHTML("<strong>No se encontraron pagos</strong>");
+                return HTMLResponseBuilder.wrapHTML("Pagos", 
+                    HTMLResponseBuilder.info("No se encontraron pagos"));
             }
             
-            StringBuilder html = new StringBuilder("<strong>═══ PAGOS ═══</strong>\n\n");
-            for (Pago p : pagos) {
-                html.append("<strong>ID:</strong> ").append(p.getId()).append("\n");
-                html.append("  • Método Pago ID: ").append(p.getMetodoPagoId()).append("\n");
-                html.append("  • Fecha: ").append(p.getFecha()).append("\n");
-                html.append("  • Monto: Bs. ").append(p.getMonto()).append("\n\n");
+            String[][] rows = new String[pagos.size()][4];
+            for (int i = 0; i < pagos.size(); i++) {
+                Pago p = pagos.get(i);
+                rows[i][0] = String.valueOf(p.getId());
+                rows[i][1] = "Método #" + p.getMetodoPagoId();
+                rows[i][2] = String.valueOf(p.getFecha());
+                rows[i][3] = "Bs. " + p.getMonto();
             }
-            html.append("<strong>Total: ").append(pagos.size()).append(" pagos</strong>");
-            return wrapHTML(html.toString());
+            
+            String tabla = HTMLResponseBuilder.buildTable(
+                new String[]{"ID", "Método Pago", "Fecha", "Monto"}, 
+                rows
+            );
+            String total = "<p style='text-align:right;font-weight:600;color:#475569;margin-top:15px'>Total: " + pagos.size() + " pagos</p>";
+            return HTMLResponseBuilder.wrapHTML("Pagos", tabla + total);
         } catch (Exception e) {
             return generarError("Error listando pagos: " + e.getMessage());
         }
@@ -467,89 +559,90 @@ public class CommandProcessor {
     // ==================== GENERADORES HTML ====================
     
     private String generarAyuda() {
-        StringBuilder html = new StringBuilder();
-        html.append("<h2>COMANDOS DISPONIBLES</h2>\n\n");
+        // Array con todos los comandos: {Comando, Descripción}
+        String[][] comandos = {
+            // Roles
+            {"LISROL[\"*\"]", "Listar roles"},
+            {"INSROL[\"nombre\",\"desc\"]", "Insertar rol"},
+            {"MODROL[\"id\",\"nombre\",\"desc\",\"activo\"]", "Modificar rol"},
+            {"DELROL[\"id\"]", "Desactivar rol"},
+            // Tipos de Vehículo
+            {"LISTVH[\"*\"]", "Listar tipos de vehículo"},
+            {"INSTVH[\"nombre\",\"desc\"]", "Insertar tipo de vehículo"},
+            {"MODTVH[\"id\",\"nombre\",\"desc\",\"activo\"]", "Modificar tipo de vehículo"},
+            {"DELTVH[\"id\"]", "Desactivar tipo de vehículo"},
+            // Tipos de Actividad
+            {"LISTAC[\"*\"]", "Listar tipos de actividad"},
+            {"INSTAC[\"nombre\",\"desc\"]", "Insertar tipo de actividad"},
+            {"MODTAC[\"id\",\"nombre\",\"desc\",\"activo\"]", "Modificar tipo de actividad"},
+            {"DELTAC[\"id\"]", "Desactivar tipo de actividad"},
+            // Tipos de Pago
+            {"LISTPG[\"*\"]", "Listar tipos de pago"},
+            {"INSTPG[\"nombre\",\"desc\"]", "Insertar tipo de pago"},
+            {"MODTPG[\"id\",\"nombre\",\"desc\",\"activo\"]", "Modificar tipo de pago"},
+            {"DELTPG[\"id\"]", "Desactivar tipo de pago"},
+            // Métodos de Pago
+            {"LISMPG[\"*\"]", "Listar métodos de pago"},
+            {"INSMPG[\"nombre\",\"desc\"]", "Insertar método de pago"},
+            {"MODMPG[\"id\",\"nombre\",\"desc\",\"activo\"]", "Modificar método de pago"},
+            {"DELMPG[\"id\"]", "Desactivar método de pago"},
+            // Usuarios
+            {"LISUSU[\"*\"]", "Listar usuarios"},
+            {"INSUSU[11 params]", "Insertar usuario"},
+            {"MODUSU[12 params]", "Modificar usuario"},
+            {"DELUSU[\"id\"]", "Eliminar usuario"},
+            // Vehículos
+            {"LISVEH[\"*\"]", "Listar vehículos"},
+            {"INSVEH[7 params]", "Insertar vehículo"},
+            {"MODVEH[8 params]", "Modificar vehículo"},
+            {"DELVEH[\"id\"]", "Eliminar vehículo"},
+            // Actividades
+            {"LISACT[\"*\"]", "Listar actividades"},
+            {"INSACT[5 params]", "Insertar actividad"},
+            {"MODACT[6 params]", "Modificar actividad"},
+            {"DELACT[\"id\"]", "Eliminar actividad"},
+            // Sesiones
+            {"LISSES[\"*\"]", "Listar sesiones"},
+            {"INSSES[8 params]", "Insertar sesión"},
+            {"MODSES[9 params]", "Modificar sesión"},
+            {"DELSES[\"id\"]", "Eliminar sesión"},
+            // Inscripciones
+            {"LISINS[\"*\"]", "Listar inscripciones"},
+            {"INSINS[7 params]", "Insertar inscripción"},
+            {"MODINS[8 params]", "Modificar inscripción"},
+            {"DELINS[\"id\"]", "Eliminar inscripción"},
+            // Pagos
+            {"LISPAG[\"*\"]", "Listar pagos"},
+            {"INSPAG[6 params]", "Insertar pago"},
+            {"MODPAG[7 params]", "Modificar pago"},
+            {"DELPAG[\"id\"]", "Eliminar pago"},
+            // Reportes
+            {"REPACT", "Reporte de actividades por tipo"},
+            {"REPUSU", "Reporte de usuarios por rol"},
+            {"REPVEH", "Reporte de vehículos por tipo"},
+            {"REPPAG", "Reporte de pagos por método"}
+        };
         
-        html.append("<h3>━━━ TABLAS CATÁLOGO (20 comandos) ━━━</h3>\n\n");
+        String tabla = HTMLResponseBuilder.buildTable(
+            new String[]{"Comando", "Descripción"}, 
+            comandos
+        );
         
-        html.append("<strong>→ Roles</strong>\n");
-        html.append("  • LISROL[\"*\"] - Listar roles\n");
-        html.append("  • INSROL[\"nombre\",\"descripcion\"] - Insertar rol\n");
-        html.append("  • MODROL[\"id\",\"nombre\",\"descripcion\",\"activo\"] - Modificar rol\n");
-        html.append("  • DELROL[\"id\"] - Desactivar rol\n\n");
+        String footer = "<p style='text-align:center;font-weight:600;color:#475569;margin-top:20px;font-size:16px'>" +
+                       "📊 TOTAL: 49 comandos (1 AYUDA + 44 CRUD + 4 REPORTES)</p>" +
+                       "<p style='text-align:center;color:#64748b;margin-top:10px'>Usa el patrón \"*\" para listar todos los registros</p>";
         
-        html.append("<strong>→ Tipos de Vehículo</strong>\n");
-        html.append("  • LISTVH[\"*\"] - Listar tipos\n");
-        html.append("  • INSTVH[\"nombre\",\"descripcion\"] - Insertar tipo\n");
-        html.append("  • MODTVH[\"id\",\"nombre\",\"descripcion\",\"activo\"] - Modificar tipo\n");
-        html.append("  • DELTVH[\"id\"] - Desactivar tipo\n\n");
-        
-        html.append("<strong>→ Tipos de Actividad</strong>\n");
-        html.append("  • LISTAC[\"*\"] - Listar tipos\n");
-        html.append("  • INSTAC[\"nombre\",\"descripcion\"] - Insertar tipo\n");
-        html.append("  • MODTAC[\"id\",\"nombre\",\"descripcion\",\"activo\"] - Modificar tipo\n");
-        html.append("  • DELTAC[\"id\"] - Desactivar tipo\n\n");
-        
-        html.append("<strong>→ Tipos de Pago</strong>\n");
-        html.append("  • LISTPG[\"*\"] - Listar tipos\n");
-        html.append("  • INSTPG[\"nombre\",\"descripcion\"] - Insertar tipo\n");
-        html.append("  • MODTPG[\"id\",\"nombre\",\"descripcion\",\"activo\"] - Modificar tipo\n");
-        html.append("  • DELTPG[\"id\"] - Desactivar tipo\n\n");
-        
-        html.append("<strong>→ Métodos de Pago</strong>\n");
-        html.append("  • LISMPG[\"*\"] - Listar métodos\n");
-        html.append("  • INSMPG[\"nombre\",\"descripcion\"] - Insertar método\n");
-        html.append("  • MODMPG[\"id\",\"nombre\",\"descripcion\",\"activo\"] - Modificar método\n");
-        html.append("  • DELMPG[\"id\"] - Desactivar método\n\n");
-        
-        html.append("<h3>━━━ TABLAS PRINCIPALES (24 comandos) ━━━</h3>\n\n");
-        
-        html.append("<strong>→ Usuarios</strong>\n");
-        html.append("  • LISUSU[\"*\"] - Listar usuarios\n");
-        html.append("  • INSUSU[11 params] - Insertar usuario\n");
-        html.append("  • MODUSU[12 params] - Modificar usuario\n");
-        html.append("  • DELUSU[\"id\"] - Eliminar usuario\n\n");
-        
-        html.append("<strong>→ Vehículos</strong>\n");
-        html.append("  • LISVEH[\"*\"] - Listar vehículos\n");
-        html.append("  • INSVEH[7 params] - Insertar vehículo\n");
-        html.append("  • MODVEH[8 params] - Modificar vehículo\n");
-        html.append("  • DELVEH[\"id\"] - Eliminar vehículo\n\n");
-        
-        html.append("<strong>→ Actividades</strong>\n");
-        html.append("  • LISACT[\"*\"] - Listar actividades\n");
-        html.append("  • INSACT[5 params] - Insertar actividad\n");
-        html.append("  • MODACT[6 params] - Modificar actividad\n");
-        html.append("  • DELACT[\"id\"] - Eliminar actividad\n\n");
-        
-        html.append("<strong>→ Sesiones</strong>\n");
-        html.append("  • LISSES[\"*\"] - Listar sesiones\n");
-        html.append("  • INSSES[8 params] - Insertar sesión\n");
-        html.append("  • MODSES[9 params] - Modificar sesión\n");
-        html.append("  • DELSES[\"id\"] - Eliminar sesión\n\n");
-        
-        html.append("<strong>→ Inscripciones</strong>\n");
-        html.append("  • LISINS[\"*\"] - Listar inscripciones\n");
-        html.append("  • INSINS[7 params] - Insertar inscripción\n");
-        html.append("  • MODINS[8 params] - Modificar inscripción\n");
-        html.append("  • DELINS[\"id\"] - Eliminar inscripción\n\n");
-        
-        html.append("<strong>→ Pagos</strong>\n");
-        html.append("  • LISPAG[\"*\"] - Listar pagos\n");
-        html.append("  • INSPAG[6 params] - Insertar pago\n");
-        html.append("  • MODPAG[7 params] - Modificar pago\n");
-        html.append("  • DELPAG[\"id\"] - Eliminar pago\n\n");
-        
-        html.append("<strong>TOTAL: 45 comandos (AYUDA + 44 CRUD)</strong>\n");
-        return wrapHTML(html.toString());
+        return HTMLResponseBuilder.wrapHTML("Comandos Disponibles", tabla + footer);
     }
     
     private String generarExito(String mensaje) {
-        return wrapHTML("<strong>✓ Éxito</strong>\n\n" + mensaje);
+        return HTMLResponseBuilder.wrapHTML("Operación Exitosa", 
+            HTMLResponseBuilder.success(mensaje));
     }
     
     private String generarError(String mensaje) {
-        return wrapHTML("<strong>✗ Error</strong>\n\n" + mensaje);
+        return HTMLResponseBuilder.wrapHTML("Error", 
+            HTMLResponseBuilder.error(mensaje));
     }
     
     private String wrapHTML(String contenido) {

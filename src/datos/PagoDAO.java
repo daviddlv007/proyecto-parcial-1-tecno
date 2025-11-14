@@ -122,4 +122,32 @@ public class PagoDAO {
         
         return rows > 0;
     }
+    
+    // === MÉTODO PARA REPORTES ===
+    public java.util.Map<String, Object[]> estadisticasPorMetodo() {
+        java.util.Map<String, Object[]> resultado = new java.util.LinkedHashMap<>();
+        try {
+            Connection conn = DBConnection.getInstance().getConnection();
+            String sql = "SELECT mp.nombre_metodo, COUNT(*) as cantidad, SUM(p.monto) as total " +
+                        "FROM pago p " +
+                        "JOIN metodo_pago mp ON p.metodo_pago_id = mp.id " +
+                        "GROUP BY mp.nombre_metodo ORDER BY total DESC";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                String nombre = rs.getString("nombre_metodo");
+                Integer cantidad = rs.getInt("cantidad");
+                Double total = rs.getDouble("total");
+                resultado.put(nombre, new Object[]{cantidad, total});
+            }
+            
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return resultado;
+    }
 }
+

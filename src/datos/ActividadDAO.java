@@ -113,4 +113,28 @@ public class ActividadDAO {
         
         return rowsAffected > 0;
     }
+    
+    // === MÉTODO PARA REPORTES ===
+    public java.util.Map<String, Integer> contarPorTipo() {
+        java.util.Map<String, Integer> resultado = new java.util.LinkedHashMap<>();
+        try {
+            Connection conn = DBConnection.getInstance().getConnection();
+            String sql = "SELECT ta.nombre_tipo, COUNT(*) as cantidad " +
+                        "FROM actividad a " +
+                        "JOIN tipo_actividad ta ON a.tipo_actividad_id = ta.id " +
+                        "GROUP BY ta.nombre_tipo ORDER BY cantidad DESC";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                resultado.put(rs.getString("nombre_tipo"), rs.getInt("cantidad"));
+            }
+            
+            rs.close();
+            stmt.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return resultado;
+    }
 }
